@@ -1,10 +1,10 @@
 
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from tasksbackend.auth import token_verification
-from tasksbackend.database import get_db
+from auth import token_verification
+from database import get_db
 from sqlalchemy.orm import Session
-from tasksbackend.models import User
+from models import User
 
 
 
@@ -33,4 +33,4 @@ def protected_route(token: str = Depends(oauth2_scheme),db:Session = Depends(get
 
     if not user:
         raise credential_Error
-    return user.username
+    return user

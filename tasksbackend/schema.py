@@ -1,7 +1,7 @@
 
 from pydantic import BaseModel,field_validator,EmailStr,model_validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime,timezone
 
 #user schema
 class user(BaseModel):
@@ -44,20 +44,20 @@ class taskview(BaseModel):
     
 
     #validate due_date
-    @field_validator("due_date")
-    def validate_due_date(cls,date):
-        try:
-         datetime.strftime(date,"%Y-%m-%d ")
-        except:
-            raise ValueError("Due date must be in YYYY-MM-DD format")
-        return date
+    #@field_validator("due_date")
+    #def validate_due_date(cls,date):
+       # try:
+       #  datetime.strftime(date,"%Y-%m-%d ")
+       # except:
+       #     raise ValueError("Due date must be in YYYY-MM-DD format")
+       # return date
 
-    #validate due_date is in future
+   # validate due_date is in future
     @field_validator("due_date")
     def validate_due_date_in_future(cls,due_date):
-        if due_date < datetime.now():
-            raise ValueError("Due date must be in future")
-        return due_date
+       if due_date < datetime.now(timezone.utc):
+           raise ValueError("Due date must be in future")
+       return due_date
     
 
 class taskupdate(BaseModel):

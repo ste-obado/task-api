@@ -1,14 +1,15 @@
 #to do list
-from tasksbackend.database import get_db
-from tasksbackend.auth import password_hash,password_verify,access_token
-from tasksbackend.models import User,Task
-from tasksbackend.protection import protected_route
-from tasksbackend.schema import taskupdate, taskview,user,user_login
+from database import Base, get_db,engine
+from auth import password_hash,password_verify,access_token
+from models import User,Task
+from protection import protected_route
+from schema import taskupdate, taskview,user,user_login
 from fastapi import FastAPI, HTTPException,Depends
 from sqlalchemy.orm import Session
 from typing import Optional
+from fastapi.security import OAuth2PasswordRequestForm
 
-
+Base.metadata.create_all(bind=engine)  # Create tables in the database
 #create app
 app =FastAPI()
 
@@ -24,7 +25,9 @@ def register_user(new_user:user,db:Session = Depends(get_db)):
     existing_user=db.query(User).filter(User.email==new_user.email).first()
     if existing_user:
         raise HTTPException(status_code=400,detail="User already exists")
-
+    print("Password:", new_user.password)
+    print("Length:", len(new_user.password))
+    print("Type:", type(new_user.password))
     #create new user
     password=password_hash(new_user.password)
     db_new_user= User(username=new_user.username,email=new_user.email,password=password)
@@ -35,21 +38,53 @@ def register_user(new_user:user,db:Session = Depends(get_db)):
     return db_new_user
 
 #user_login
+#@app.post("/login")
+#def login_user(user:user_login,db:Session = Depends(get_db)):
+
+
 @app.post("/login")
-def login_user(user:user_login,db:Session = Depends(get_db)):
-    #check if user exists
-    existing_user=db.query(User).filter(User.email==user.email).first()
+def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    existing_user = db.query(User).filter(
+        User.email == form_data.username
+    ).first()
+
     if not existing_user:
-        raise HTTPException(status_code=400,detail="Invalid email or password")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid email or password"
+        )
+
+    if not password_verify(form_data.password, existing_user.password):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid email or password"
+        )
+
+    token_data = {"sub": str(existing_user.id)}
+    token = access_token(token_data)
+
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
+
+
+    #check if user exists
+    #existing_user=db.query(User).filter(User.email==user.email).first()
+    #if not existing_user:
+        #raise HTTPException(status_code=400,detail="Invalid email or password")
 
     #verify password to match the existing user password
-    if not password_verify(user.password,existing_user.password):
-        raise HTTPException(status_code=400,detail="Invalid email or password")
+    #if not password_verify(user.password,existing_user.password):
+        #raise HTTPException(status_code=400,detail="Invalid email or password")
 
     #create access token
-    token_data={"sub":existing_user.id}
-    token=access_token(token_data)
-    return {"access_token":token,"token_type":"bearer"}
+    #token_data={"sub":existing_user.id}
+    #token=access_token(token_data)
+    #return {"access_token":token,"token_type":"bearer"}
 
 
 ###------------------PROTECTED ROUTES-----------------------------
@@ -158,7 +193,8 @@ def mark_task_completed(task_id:int,user:User = Depends(protected_route),db:Sess
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    task.update({"status": "completed"})
+    #task.update({"status": "completed"})
+    task.status = "completed"
     db.commit()
     db.refresh(task)
     return {"message":"Task marked as completed","TASK":task}
@@ -169,11 +205,11 @@ def mark_task_completed(task_id:int,user:User = Depends(protected_route),db:Sess
 
 #update one task
 @app.patch("/update_task/{task_id}")
-def update_task_status(task_id:int,updated_task:taskupdate,user:User = Depends(protected_route),db:Session = Depends(get_db)):
+def update_task_status(task_id:int,taskupdate,user:User = Depends(protected_route),db:Session = Depends(get_db)):
    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
    if not task:
         raise HTTPException(status_code=404,detail="Task not found")
-   task.status = "completed"
+  
    db.commit()
    db.refresh(task)       
    return {"message":"Task updated","TASK":task}    
@@ -190,3 +226,5 @@ def delete_task(task_id:int,user:User = Depends(protected_route),db:Session = De
    db.delete(task)
    db.commit()
    return {"message":"Task deleted"}  
+
+

@@ -1,4 +1,4 @@
-from tasksbackend.database import Base
+from database import Base
 from sqlalchemy import ForeignKey, Integer,String,DateTime,Column,Boolean,DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
