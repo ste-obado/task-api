@@ -205,7 +205,7 @@ def mark_task_completed(task_id:int,user:User = Depends(protected_route),db:Sess
 
 #update one task
 @app.patch("/update_task/{task_id}")
-def update_task_status(task_id:int,taskupdate,user:User = Depends(protected_route),db:Session = Depends(get_db)):
+def update_task_status(task_id:int,task:taskupdate,user:User = Depends(protected_route),db:Session = Depends(get_db)):
    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
    if not task:
         raise HTTPException(status_code=404,detail="Task not found")
